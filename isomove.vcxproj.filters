@@ -23,11 +23,5 @@
     <ClInclude Include="TinyG.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Optel_tinyg_DLL\optel_tinyg_dll.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Optel_tinyg_DLL\optel_tinyg_api.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

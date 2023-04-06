@@ -162,8 +162,6 @@
     <ClCompile Include="TinyG.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Optel_tinyg_DLL\optel_tinyg_api.h" />
-    <ClInclude Include="Optel_tinyg_DLL\optel_tinyg_dll.h" />
     <ClInclude Include="TinyG.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
