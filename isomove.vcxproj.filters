@@ -15,23 +15,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="stristr.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="TinyG.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Optel_tinyg_DLL\Win32Trace.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ASCII.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="stristr.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="TinyG.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -39,9 +27,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Optel_tinyg_DLL\optel_tinyg_api.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Optel_tinyg_DLL\Win32Trace.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

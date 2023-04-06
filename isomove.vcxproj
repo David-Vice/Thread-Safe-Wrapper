@@ -154,16 +154,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Optel_tinyg_DLL\Win32Trace.cpp" />
-    <ClCompile Include="stristr.cpp" />
     <ClCompile Include="TinyG.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ASCII.h" />
     <ClInclude Include="Optel_tinyg_DLL\optel_tinyg_api.h" />
     <ClInclude Include="Optel_tinyg_DLL\optel_tinyg_dll.h" />
-    <ClInclude Include="Optel_tinyg_DLL\Win32Trace.h" />
-    <ClInclude Include="stristr.h" />
     <ClInclude Include="TinyG.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
