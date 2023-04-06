@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="win32con.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="stristr.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -29,9 +26,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="win32con.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ASCII.h">
       <Filter>Header Files</Filter>
     </ClInclude>

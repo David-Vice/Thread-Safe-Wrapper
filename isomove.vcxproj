@@ -157,7 +157,6 @@
     <ClCompile Include="Optel_tinyg_DLL\Win32Trace.cpp" />
     <ClCompile Include="stristr.cpp" />
     <ClCompile Include="TinyG.cpp" />
-    <ClCompile Include="win32con.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ASCII.h" />
@@ -166,7 +165,6 @@
     <ClInclude Include="Optel_tinyg_DLL\Win32Trace.h" />
     <ClInclude Include="stristr.h" />
     <ClInclude Include="TinyG.h" />
-    <ClInclude Include="win32con.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

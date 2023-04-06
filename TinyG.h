@@ -1,7 +1,6 @@
 #include <Windows.h>
 #include <time.h>
 #include "win32comm.h"
-#include "win32con.h"
 #include "optel_tinyg_api.h"
 #include <msclr/marshal.h>
 #include <msclr/gcroot.h>
