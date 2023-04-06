@@ -86,6 +86,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);Optel_tinyg_DLL</IncludePath>
     <EnableManagedIncrementalBuild>true</EnableManagedIncrementalBuild>
+    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir>$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -119,6 +121,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>.\$(configuration)\optel_tinyg_dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /y "$(SolutionDir)$(Configuration)\isomove.dll" "C:\Users\JAVID\Desktop\WpfApp2\WpfApp2\bin\x86\Debug"&amp;xcopy /y "$(SolutionDir)$(Configuration)\Optel_tinyg_DLL.dll" "C:\Users\JAVID\Desktop\WpfApp2\WpfApp2\bin\x86\Debug"&amp;xcopy /y "$(SolutionDir)$(Configuration)\isomove.dll" "C:\Users\JAVID\Desktop\Check DLL x32\bin\x86\Debug"&amp;xcopy /y "$(SolutionDir)$(Configuration)\Optel_tinyg_DLL.dll" "C:\Users\JAVID\Desktop\Check DLL x32\bin\x86\Debug"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
