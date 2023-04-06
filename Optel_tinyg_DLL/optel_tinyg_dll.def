@@ -1,0 +1,10 @@
+LIBRARY		"optel_tinyg_DLL"
+
+EXPORTS
+	tg_version
+	tg_mname
+	tg_getpos
+	tg_home
+	tg_move
+	tg_getranges
+	tg_comm
