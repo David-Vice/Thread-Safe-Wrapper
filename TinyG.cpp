@@ -1,4 +1,9 @@
 #include "TinyG.h"
+#include <Windows.h>
+#include <time.h>
+#include "win32comm.h"
+#include "optel_tinyg_api.h"
+#include <msclr/marshal.h>
 
 using namespace TinyGLib;
 using namespace msclr::interop;
