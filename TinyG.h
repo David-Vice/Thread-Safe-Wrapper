@@ -1,3 +1,6 @@
+#pragma once
+#include <msclr/marshal.h>
+
 namespace TinyGLib {
 
     public value struct TgRange
