@@ -149,6 +149,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="crtitical.h" />
     <ClInclude Include="KEYS.H" />
     <ClInclude Include="optel_tinyg_api.h" />
     <ClInclude Include="optel_tinyg_dll.h" />

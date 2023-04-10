@@ -15,12 +15,13 @@
 #include <Windows.h>
 #include <math.h>
 #include <time.h>
+#include "crtitical.h"
 
 #include "optel_tinyg_dll.h"
 #include "optel_tinyg_api.h"
 #include "win32comm.h"
 #include "stristr.h"
-
+CRITICAL_SECTION cmdio_critical_section;
 
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
@@ -63,6 +64,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:
+		InitializeCriticalSection(&cmdio_critical_section);
 		if ( module == NULL )
 		{
 			module = hModule;
@@ -146,6 +148,9 @@ noport:
 		break;
 
     case DLL_THREAD_DETACH:
+		return TRUE;
+		break;
+
     case DLL_PROCESS_DETACH:
         if ( hModule == module )
         {
@@ -156,7 +161,7 @@ noport:
 			return TRUE;
 		}
 //		else we are not the detach target
-
+		DeleteCriticalSection(&cmdio_critical_section);
 		break;
     }
 	return FALSE;
