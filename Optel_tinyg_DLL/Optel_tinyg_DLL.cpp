@@ -15,7 +15,7 @@
 #include <Windows.h>
 #include <math.h>
 #include <time.h>
-#include "crtitical.h"
+#include "critical.h"
 
 #include "optel_tinyg_dll.h"
 #include "optel_tinyg_api.h"

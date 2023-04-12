@@ -246,7 +246,7 @@
 #include "keys.h"
 #include "stristr.h"
 #include "Win32Trace.h"
-#include "crtitical.h"
+#include "critical.h"
 
 
 
