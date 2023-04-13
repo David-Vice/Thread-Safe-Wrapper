@@ -22,6 +22,23 @@
 #include "win32comm.h"
 #include "stristr.h"
 CRITICAL_SECTION cmdio_critical_section;
+
+FILE* logFile = nullptr;
+
+void initLogging() {
+	logFile = fopen("log.txt", "a+");
+	if (logFile) {
+		freopen("log.txt", "a+", stdout);
+		setvbuf(stdout, nullptr, _IONBF, 0); // disable buffering for stdout
+	}
+}
+
+void cleanupLogging() {
+	if (logFile) {
+		fclose(logFile);
+		logFile = nullptr;
+	}
+}
 BOOL create_ports() {
 	int ports[100];
 	int k = 0, j = 0, i = 0, l = 0;
@@ -88,7 +105,7 @@ BOOL create_ports() {
 	else
 		goto noport;
 
-	int i;
+	//int i;
 	if ((i = portselect(l))) {
 		LeaveCriticalSection(&cmdio_critical_section);
 		return FALSE;
@@ -173,9 +190,9 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 		if ( module == NULL )
 		{
 			module = hModule;
-			
+			initLogging();
 			int ports[ 100 ];
-
+			printf("Process A");
 			if ( ( i = findserialports( ports ) ) > 0 )
 			{
 				k = 0;															//	count of FTDI ports
@@ -249,10 +266,12 @@ noport:
         break;
 
     case DLL_THREAD_ATTACH:
+		printf("Thread A");
 		return TRUE;
 		break;
 
     case DLL_THREAD_DETACH:
+		printf("Thread D");
 		return TRUE;
 		break;
 
@@ -260,9 +279,10 @@ noport:
         if ( hModule == module )
         {
             //  Close all operations & free all variables
-
+			printf("Process D");
 			printf( "Bye from Optel_TinyG_DLL\n" );
 			closeports( );
+			cleanupLogging();
 			return TRUE;
 		}
 //		else we are not the detach target
