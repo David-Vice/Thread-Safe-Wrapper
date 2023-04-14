@@ -15,32 +15,14 @@
 #include <Windows.h>
 #include <math.h>
 #include <time.h>
-#include "critical.h"
 
 #include "optel_tinyg_dll.h"
 #include "optel_tinyg_api.h"
+#include "critical.h"
 #include "win32comm.h"
 #include "stristr.h"
+
 CRITICAL_SECTION cmdio_critical_section;
-
-FILE* logFile = nullptr;
-
-void initLogging() {
-	logFile = fopen("log.txt", "a+");
-	if (logFile) {
-		freopen("log.txt", "a+", stdout);
-		setvbuf(stdout, nullptr, _IONBF, 0); // disable buffering for stdout
-	}
-}
-
-void cleanupLogging() {
-	if (logFile) {
-		fclose(logFile);
-		logFile = nullptr;
-	}
-}
-
-
 
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
@@ -48,37 +30,6 @@ BOOL APIENTRY DllMain( HMODULE hModule,
                      )
 {
     static		HMODULE module = NULL;
-	int			i, j, k, l;
-	char		*p, buf[ 500 ];
-	DCB			prm = { sizeof( prm ),		// sizeof(DCB)
-						115200,				// current baud rate 
-						1,					// binary mode, no EOF check
-						0,					// enable parity checking
-						0,					// CTS output flow control
-						0,					// DSR output flow control
-						0,					// DTR flow control type
-						0,					// DSR sensitivity
-						0,					// XOFF continues Tx
-						0,					// XON/XOFF out flow control
-						0,					// XON/XOFF in flow control
-						0,					// enable error replacement 
-						0,					// enable null stripping 
-						0,					// RTS flow control 
-						0,					// abort reads/writes on error
-						0,					// reserved 
-						0,					// not currently used 
-						0,					// transmit XON threshold 
-						0,					// transmit XOFF threshold 
-						8,					// number of bits/byte, 4-8
-						0,					// parity: 0-4=no,odd,even,mark,space 
-						0,					// stop bits: 0,1,2 = 1, 1.5, 2 
-						0,					// Tx and Rx XON character 
-						0,					// Tx and Rx XOFF character 
-						0,					// error replacement character 
-						0,					// end of input character 
-						0,					// received event character 
-						0 };				// reserved; do not use 
-
 
     switch (ul_reason_for_call)
     {
@@ -87,73 +38,8 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 		if ( module == NULL )
 		{
 			module = hModule;
-			initLogging();
-			int ports[ 100 ];
-			printf("Process A");
-			if ( ( i = findserialports( ports ) ) > 0 )
-			{
-				k = 0;															//	count of FTDI ports
-
-				for ( j = 0; j < i; j ++ )
-				{
-					if ( ( p = (char *) getportinfo( (char *) "manufacturer", ports[ j ] ) ) != NULL )
-					{
-						if ( stristr( p, (char *) "FTDI" ) == p )
-						{
-							k ++;
-							l = ports[ j ] - 1;
-						}
-					}
-				}
-
-				if ( !k )
-				{
-noport:
-					printf( "Sorry, I can't find a TinyG controller to connect with\n" );
-					return FALSE;
-				}
-
-				if ( k > 1 )
-				{
-					printf( "There are multiple FTDI serial ports, please unplug the ones not connected to TinyG\n" );
-					return FALSE;
-				}
-			}
-			else
-				goto noport;
-
-			int i;
-			if ( ( i = portselect( l ) ) ) return FALSE;
-
-			if ( setcomprm( &prm ) )
-			{
-				printf( "Can't configure COM-%d\n", l + 1 );
-				return FALSE;
-			}
-
-			if ( !cmdio( (char *) " \r", 10 * CLOCKS_PER_SEC, buf, sizeof( buf ), (char *) "\xA" ) )
-			{
-				printf( "Is TinyG running on COM-%d?\n", l + 1 );
-				return FALSE;
-			}
-
-			printf( "Found TinyG on COM-%d: %s\n", l + 1, buf );
-
-			//	check tinyg configuration
-
-			if ( strchr( buf, '{' ) != NULL )
-			{
-				//	JSON report mode is on, turn it off.
-				if ( !cmdio( (char *) "$ej=0\r", CLOCKS_PER_SEC, buf, sizeof( buf ), (char *) "\xA" ) )
-				{
-					printf( "Can't disable JSON reporting\n" );
-					return FALSE;
-				}
-				else
-					printf( "JSON reports off (text reports on)\n" );
-			}
-			printf( "Hi from Optel_tinyg_DLL %d, V%.3lf, %02d/%02d/%04d\n", ul_reason_for_call, TG_VERSION, RELMO, RELDA, RELYR );
-			return TRUE;
+			printf("Process A\n");
+			return tg_open_ports();
 		}
 		else
 		{
@@ -163,12 +49,10 @@ noport:
         break;
 
     case DLL_THREAD_ATTACH:
-		printf("Thread A");
 		return TRUE;
 		break;
 
     case DLL_THREAD_DETACH:
-		printf("Thread D");
 		return TRUE;
 		break;
 
@@ -176,10 +60,8 @@ noport:
         if ( hModule == module )
         {
             //  Close all operations & free all variables
-			printf("Process D");
-			printf( "Bye from Optel_TinyG_DLL\n" );
-			closeports( );
-			cleanupLogging();
+			printf("Process D\n");
+			tg_close_ports( );
 			return TRUE;
 		}
 //		else we are not the detach target
@@ -189,12 +71,10 @@ noport:
 	return FALSE;
 }
 
-
-
 BOOL tg_open_ports() {
-	int ports[100];
 	int k = 0, j = 0, i = 0, l = 0;
 	char* p, buf[500];
+	int ports[100];
 	DCB			prm = { sizeof(prm),		// sizeof(DCB)
 						115200,				// current baud rate 
 						1,					// binary mode, no EOF check
@@ -243,14 +123,12 @@ BOOL tg_open_ports() {
 		{
 		noport:
 			printf("Sorry, I can't find a TinyG controller to connect with\n");
-			LeaveCriticalSection(&cmdio_critical_section);
 			return FALSE;
 		}
 
 		if (k > 1)
 		{
 			printf("There are multiple FTDI serial ports, please unplug the ones not connected to TinyG\n");
-			LeaveCriticalSection(&cmdio_critical_section);
 			return FALSE;
 		}
 	}
@@ -259,20 +137,17 @@ BOOL tg_open_ports() {
 
 	//int i;
 	if ((i = portselect(l))) {
-		LeaveCriticalSection(&cmdio_critical_section);
 		return FALSE;
 	}
 	if (setcomprm(&prm))
 	{
 		printf("Can't configure COM-%d\n", l + 1);
-		LeaveCriticalSection(&cmdio_critical_section);
 		return FALSE;
 	}
 
 	if (!cmdio((char*)" \r", 10 * CLOCKS_PER_SEC, buf, sizeof(buf), (char*)"\xA"))
 	{
 		printf("Is TinyG running on COM-%d?\n", l + 1);
-		LeaveCriticalSection(&cmdio_critical_section);
 		return FALSE;
 	}
 
@@ -286,14 +161,12 @@ BOOL tg_open_ports() {
 		if (!cmdio((char*)"$ej=0\r", CLOCKS_PER_SEC, buf, sizeof(buf), (char*)"\xA"))
 		{
 			printf("Can't disable JSON reporting\n");
-			LeaveCriticalSection(&cmdio_critical_section);
 			return FALSE;
 		}
 		else
 			printf("JSON reports off (text reports on)\n");
 	}
 	printf("Hi from Optel_tinyg_DLL , V%.3lf, %02d/%02d/%04d\n", TG_VERSION, RELMO, RELDA, RELYR);
-	LeaveCriticalSection(&cmdio_critical_section);
 	return TRUE;
 }
 
@@ -301,15 +174,10 @@ void tg_close_ports() {
 	closeports();
 }
 
-
-
-
 double  tg_version( void )
 {
     return( TG_VERSION );
 }
-
-
 
 const char *tg_mname[ MM ] =
 {
@@ -319,9 +187,7 @@ const char *tg_mname[ MM ] =
 	(const char *) "a",
 };
 
-
 //	Return 4 motor positions.
-
 bool tg_getpos( double pos[ ] )
 {
 	char	buf[ 300 ];
@@ -384,13 +250,10 @@ bool tg_getpos( double pos[ ] )
 	return( false );
 }
 
-
 //	Home up to 4 motors.
 //	True on success
-
 bool tg_home( bool home[ MM ], int tosec )
 {
-//	tg_open_ports();
 	char	buf[ 300 ];
 	int		i = 0, j = 0;
 	int		retry;
@@ -405,7 +268,7 @@ bool tg_home( bool home[ MM ], int tosec )
 				printf( "home(%s) ", tg_mname[ i ] );
 
 				//	Build the home command by listing the motors we've been asked to home.
-				//printf(buf, "g28.2 %s0\r", tg_mname[i]);
+				//	printf(buf, "g28.2 %s0\r", tg_mname[i]);
 				sprintf( buf, "g28.2 %s0\r", tg_mname[ i ] );
 
 				//	Send the home command g29.2 axis0
@@ -420,14 +283,11 @@ bool tg_home( bool home[ MM ], int tosec )
 					*buf = 0;													//	only send the command once
 				}
 			}	//	for retry
-			//closeports();
 			return( false );													//	didn't home in 3 tries
 		}	//	motor being homed
 next_motor:;
 	}	//	for each possible motor
-
 	//	verify all homed motor positions are 0
-
 	if ( tg_getpos( pos ) )
 	{
 		for ( i = 0; i < 4; i ++ )
@@ -435,28 +295,22 @@ next_motor:;
 			if ( home[ i ] && fabs( pos[ i ] ) > 0.0001 )
 			{
 				printf( "%s isn't home\n", tg_mname[ i ] );
-				//closeports();
 				return( false );
 			}
 		}
 	}
 	else {
-		//closeports();
 		return(false);
 	}
-	//closeports();
 	return( true );
 }
-
 
 //	Move up to 4 motors to their specified positions
 //	move is true if a motor is being moved.
 //	values are in x, y, z, a order.
 //	True on success.
-
 bool tg_move( bool move[ MM ], double pos[ MM ], int tosec )
 {
-	//tg_open_ports();
 	char	buf[ 300 ],															//	tinyg command
 			rbuf[ 300 ],														//	receive
 			sbuf[ 300 ],														//	completion status
@@ -523,7 +377,7 @@ bool tg_move( bool move[ MM ], double pos[ MM ], int tosec )
 				//	lines contain posm1:<pos>,posm2:<pos>,...vel:<vel>,stat:<status>
 				//	The final line contains all moving motors with their positions equal to pos[].
 
-//				printf( "%s\n", rbuf );
+				//	printf( "%s\n", rbuf );
 
 				if (strstr(rbuf, sbuf) != NULL) {
 					//closeports();
@@ -538,17 +392,13 @@ bool tg_move( bool move[ MM ], double pos[ MM ], int tosec )
 			return(true);
 		}//	no motors moving, success
 	}	//	retry
-	//closeports();
 	return( false );															//	didn't get proper status
 }
 
-
 const char *rmin = "$%stn\r";													//	request min range
 const char *rmax = "$%stm\r";													//	and max range
-
 bool tg_getranges( tg_range_t *mrange )
 {
-	//tg_open_ports();
 	int		i, retry;
 	char	buf[ 300 ], rbuf[ 300 ];
 
@@ -560,7 +410,7 @@ bool tg_getranges( tg_range_t *mrange )
 
 			while ( cmdio( buf, CLOCKS_PER_SEC, rbuf, sizeof( rbuf ), (char *) "\xA", false ) )
 			{
-//				printf( "%s\n", rbuf );
+				//	printf( "%s\n", rbuf );
 				//	[xtn] x travel minimum            0.000 mm
 				//	tinyg [mm] ok>
 
@@ -606,11 +456,9 @@ bool tg_getranges( tg_range_t *mrange )
 			printf( "Motor Ranges:\n" );
 			for ( i = 0; i < 4; i ++ )
 				printf( "%s\t%.3lf\t%.3lf\n", tg_mname[ i ], mrange[ i ].min, mrange[ i ].max );
-			//closeports();
 			return( true );
 		}
 	}	//	for retry
-	//closeports();
 	return( false );
 }
 
@@ -618,4 +466,3 @@ void tg_comm( char *msg )
 {
 	simplecomma( 0x1B, true, msg, true );
 }
-

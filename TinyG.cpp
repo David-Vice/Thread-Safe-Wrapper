@@ -109,19 +109,15 @@ void TinyG::Comm(System::String^ message)
     const char* nativeMessage = context.marshal_as<const char*>(message);
     tg_comm(const_cast<char*>(nativeMessage));
 }
+
 bool TinyG::OpenPorts()
 {
     scoped_lock lock(m_Mutex);
     return tg_open_ports();
 }
+
 void TinyG::ClosePorts()
 {
     scoped_lock lock(m_Mutex);
-    return tg_close_ports();
+    tg_close_ports();
 }
-//int main(array<System::String^>^ args)
-//{
-//    TinyG tgWrapper;
-//    tgWrapper.Version();
-//    return(0);
-//}
