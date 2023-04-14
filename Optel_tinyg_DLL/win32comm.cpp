@@ -246,6 +246,7 @@
 #include "keys.h"
 #include "stristr.h"
 #include "Win32Trace.h"
+#include "critical.h"
 
 
 
@@ -1375,13 +1376,20 @@ BOOL cmdio( char *cmd, long timeout, char *recvbuf, int maxlen, void (*callback)
 
 BOOL cmdio( char *cmd, long timeout, char *recvbuf, int maxlen, char *delims )
 {
+	EnterCriticalSection(&cmdio_critical_section);
 	clock_t			marktm;
 	unsigned char	c;	//, retry = 2;
 	int				i;
 
-	if ( portinit[ selport ] == NULL && portinit[ selport ] && openport( portnumbers[ selport ] - 1 ) != 0 ) return( FALSE );
+	if (portinit[selport] == NULL && portinit[selport] && openport(portnumbers[selport] - 1) != 0) { 
+		LeaveCriticalSection(&cmdio_critical_section);
+		return(FALSE);
+	}
 
-	if ( !portinit[ selport ] ) return( 0 );									//	this is a caller error!?!
+	if (!portinit[selport]) { 
+		LeaveCriticalSection(&cmdio_critical_section);
+		return(0);
+	}									//	this is a caller error!?!
 
 	strcpy_s( lastcommand, cmd );												//	save a diagnosic copy
 
@@ -1445,6 +1453,7 @@ BOOL cmdio( char *cmd, long timeout, char *recvbuf, int maxlen, char *delims )
 #ifdef COMDEBUG
 				TRACE( (char *) " %02X\n", c );
 #endif
+				LeaveCriticalSection(&cmdio_critical_section);
 				return( TRUE );
 			}
 			else
@@ -1459,10 +1468,12 @@ BOOL cmdio( char *cmd, long timeout, char *recvbuf, int maxlen, char *delims )
 			if ( i < 0 )
 			{
 				TRACE( ( char * ) "Port disconnect\n" );
+				LeaveCriticalSection(&cmdio_critical_section);
 				return( FALSE );
 			}
     }
 	TRACE( (char *) "cmdio timeout to %s\n", cmd );
+	LeaveCriticalSection(&cmdio_critical_section);
 	return( FALSE );
 }
 
@@ -1472,13 +1483,22 @@ BOOL cmdio( char *cmd, long timeout, char *recvbuf, int maxlen, char *delims )
 
 bool cmdio( char *cmd, long timeout, char *recvbuf, int maxlen, char *delims, bool clearbuf )
 {
+	EnterCriticalSection(&cmdio_critical_section);
 	clock_t			marktm;
 	unsigned char	c;	//, retry = 2;
 	int				i;
 
-	if ( portinit[ selport ] == NULL && portinit[ selport ] && openport( portnumbers[ selport ] - 1 ) != 0 ) return( FALSE );
+	if (portinit[selport] == NULL && portinit[selport] && openport(portnumbers[selport] - 1) != 0)
+	{
+		LeaveCriticalSection(&cmdio_critical_section);
+		return(FALSE);
+	}
 
-	if ( !portinit[ selport ] ) return( 0 );									//	this is a caller error!?!
+	if ( !portinit[ selport ] )									//	this is a caller error!?!
+	{
+		LeaveCriticalSection(&cmdio_critical_section);
+		return(0);
+	}
 
 	strcpy_s( lastcommand, cmd );												//	save a diagnosic copy
 
@@ -1542,6 +1562,8 @@ bool cmdio( char *cmd, long timeout, char *recvbuf, int maxlen, char *delims, bo
 #ifdef COMDEBUG
 //				TRACE( (char *) " %02X\n", c );
 #endif
+				LeaveCriticalSection(&cmdio_critical_section);
+
 				return( TRUE );
 			}
 			else
@@ -1556,10 +1578,12 @@ bool cmdio( char *cmd, long timeout, char *recvbuf, int maxlen, char *delims, bo
 			if ( i < 0 )
 			{
 				TRACE( (char *) "Port disconnect\n" );
+				LeaveCriticalSection(&cmdio_critical_section);
 				return( FALSE );
 			}
 	}
 	TRACE( (char *) "cmdio timeout to %s\n", cmd );
+	LeaveCriticalSection(&cmdio_critical_section);
 	return( FALSE );
 }
 

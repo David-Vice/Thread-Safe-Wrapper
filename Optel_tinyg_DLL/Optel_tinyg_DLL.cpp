@@ -18,9 +18,11 @@
 
 #include "optel_tinyg_dll.h"
 #include "optel_tinyg_api.h"
+#include "critical.h"
 #include "win32comm.h"
 #include "stristr.h"
 
+CRITICAL_SECTION cmdio_critical_section;
 
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
@@ -28,9 +30,52 @@ BOOL APIENTRY DllMain( HMODULE hModule,
                      )
 {
     static		HMODULE module = NULL;
-	int			i, j, k, l;
-	char		*p, buf[ 500 ];
-	DCB			prm = { sizeof( prm ),		// sizeof(DCB)
+
+    switch (ul_reason_for_call)
+    {
+    case DLL_PROCESS_ATTACH:
+		InitializeCriticalSection(&cmdio_critical_section);
+		if ( module == NULL )
+		{
+			module = hModule;
+			printf("Process A\n");
+			return tg_open_ports();
+		}
+		else
+		{
+			printf( "Optel_TinyG_DLL: Can't share COM port resources\n" );
+			return FALSE;
+		}
+        break;
+
+    case DLL_THREAD_ATTACH:
+		return TRUE;
+		break;
+
+    case DLL_THREAD_DETACH:
+		return TRUE;
+		break;
+
+    case DLL_PROCESS_DETACH:
+        if ( hModule == module )
+        {
+            //  Close all operations & free all variables
+			printf("Process D\n");
+			tg_close_ports( );
+			return TRUE;
+		}
+//		else we are not the detach target
+		DeleteCriticalSection(&cmdio_critical_section);
+		break;
+    }
+	return FALSE;
+}
+
+BOOL tg_open_ports() {
+	int k = 0, j = 0, i = 0, l = 0;
+	char* p, buf[500];
+	int ports[100];
+	DCB			prm = { sizeof(prm),		// sizeof(DCB)
 						115200,				// current baud rate 
 						1,					// binary mode, no EOF check
 						0,					// enable parity checking
@@ -58,117 +103,81 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 						0,					// end of input character 
 						0,					// received event character 
 						0 };				// reserved; do not use 
+	if ((i = findserialports(ports)) > 0)
+	{
+		k = 0;															//	count of FTDI ports
 
-
-    switch (ul_reason_for_call)
-    {
-    case DLL_PROCESS_ATTACH:
-		if ( module == NULL )
+		for (j = 0; j < i; j++)
 		{
-			module = hModule;
-			
-			int ports[ 100 ];
-
-			if ( ( i = findserialports( ports ) ) > 0 )
+			if ((p = (char*)getportinfo((char*)"manufacturer", ports[j])) != NULL)
 			{
-				k = 0;															//	count of FTDI ports
-
-				for ( j = 0; j < i; j ++ )
+				if (stristr(p, (char*)"FTDI") == p)
 				{
-					if ( ( p = (char *) getportinfo( (char *) "manufacturer", ports[ j ] ) ) != NULL )
-					{
-						if ( stristr( p, (char *) "FTDI" ) == p )
-						{
-							k ++;
-							l = ports[ j ] - 1;
-						}
-					}
-				}
-
-				if ( !k )
-				{
-noport:
-					printf( "Sorry, I can't find a TinyG controller to connect with\n" );
-					return FALSE;
-				}
-
-				if ( k > 1 )
-				{
-					printf( "There are multiple FTDI serial ports, please unplug the ones not connected to TinyG\n" );
-					return FALSE;
+					k++;
+					l = ports[j] - 1;
 				}
 			}
-			else
-				goto noport;
-
-			int i;
-			if ( ( i = portselect( l ) ) ) return FALSE;
-
-			if ( setcomprm( &prm ) )
-			{
-				printf( "Can't configure COM-%d\n", l + 1 );
-				return FALSE;
-			}
-
-			if ( !cmdio( (char *) " \r", 10 * CLOCKS_PER_SEC, buf, sizeof( buf ), (char *) "\xA" ) )
-			{
-				printf( "Is TinyG running on COM-%d?\n", l + 1 );
-				return FALSE;
-			}
-
-			printf( "Found TinyG on COM-%d: %s\n", l + 1, buf );
-
-			//	check tinyg configuration
-
-			if ( strchr( buf, '{' ) != NULL )
-			{
-				//	JSON report mode is on, turn it off.
-				if ( !cmdio( (char *) "$ej=0\r", CLOCKS_PER_SEC, buf, sizeof( buf ), (char *) "\xA" ) )
-				{
-					printf( "Can't disable JSON reporting\n" );
-					return FALSE;
-				}
-				else
-					printf( "JSON reports off (text reports on)\n" );
-			}
-			printf( "Hi from Optel_tinyg_DLL %d, V%.3lf, %02d/%02d/%04d\n", ul_reason_for_call, TG_VERSION, RELMO, RELDA, RELYR );
-			return TRUE;
 		}
-		else
+
+		if (!k)
 		{
-			printf( "Optel_TinyG_DLL: Can't share COM port resources\n" );
+		noport:
+			printf("Sorry, I can't find a TinyG controller to connect with\n");
 			return FALSE;
 		}
-        break;
 
-    case DLL_THREAD_ATTACH:
-		return TRUE;
-		break;
-
-    case DLL_THREAD_DETACH:
-    case DLL_PROCESS_DETACH:
-        if ( hModule == module )
-        {
-            //  Close all operations & free all variables
-
-			printf( "Bye from Optel_TinyG_DLL\n" );
-			closeports( );
-			return TRUE;
+		if (k > 1)
+		{
+			printf("There are multiple FTDI serial ports, please unplug the ones not connected to TinyG\n");
+			return FALSE;
 		}
-//		else we are not the detach target
+	}
+	else
+		goto noport;
 
-		break;
-    }
-	return FALSE;
+	//int i;
+	if ((i = portselect(l))) {
+		return FALSE;
+	}
+	if (setcomprm(&prm))
+	{
+		printf("Can't configure COM-%d\n", l + 1);
+		return FALSE;
+	}
+
+	if (!cmdio((char*)" \r", 10 * CLOCKS_PER_SEC, buf, sizeof(buf), (char*)"\xA"))
+	{
+		printf("Is TinyG running on COM-%d?\n", l + 1);
+		return FALSE;
+	}
+
+	printf("Found TinyG on COM-%d: %s\n", l + 1, buf);
+
+	//	check tinyg configuration
+
+	if (strchr(buf, '{') != NULL)
+	{
+		//	JSON report mode is on, turn it off.
+		if (!cmdio((char*)"$ej=0\r", CLOCKS_PER_SEC, buf, sizeof(buf), (char*)"\xA"))
+		{
+			printf("Can't disable JSON reporting\n");
+			return FALSE;
+		}
+		else
+			printf("JSON reports off (text reports on)\n");
+	}
+	printf("Hi from Optel_tinyg_DLL , V%.3lf, %02d/%02d/%04d\n", TG_VERSION, RELMO, RELDA, RELYR);
+	return TRUE;
 }
 
+void tg_close_ports() {
+	closeports();
+}
 
 double  tg_version( void )
 {
     return( TG_VERSION );
 }
-
-
 
 const char *tg_mname[ MM ] =
 {
@@ -178,9 +187,7 @@ const char *tg_mname[ MM ] =
 	(const char *) "a",
 };
 
-
 //	Return 4 motor positions.
-
 bool tg_getpos( double pos[ ] )
 {
 	char	buf[ 300 ];
@@ -243,10 +250,8 @@ bool tg_getpos( double pos[ ] )
 	return( false );
 }
 
-
 //	Home up to 4 motors.
 //	True on success
-
 bool tg_home( bool home[ MM ], int tosec )
 {
 	char	buf[ 300 ];
@@ -263,7 +268,7 @@ bool tg_home( bool home[ MM ], int tosec )
 				printf( "home(%s) ", tg_mname[ i ] );
 
 				//	Build the home command by listing the motors we've been asked to home.
-				//printf(buf, "g28.2 %s0\r", tg_mname[i]);
+				//	printf(buf, "g28.2 %s0\r", tg_mname[i]);
 				sprintf( buf, "g28.2 %s0\r", tg_mname[ i ] );
 
 				//	Send the home command g29.2 axis0
@@ -282,9 +287,7 @@ bool tg_home( bool home[ MM ], int tosec )
 		}	//	motor being homed
 next_motor:;
 	}	//	for each possible motor
-
 	//	verify all homed motor positions are 0
-
 	if ( tg_getpos( pos ) )
 	{
 		for ( i = 0; i < 4; i ++ )
@@ -296,18 +299,16 @@ next_motor:;
 			}
 		}
 	}
-	else
-		return( false );
-
+	else {
+		return(false);
+	}
 	return( true );
 }
-
 
 //	Move up to 4 motors to their specified positions
 //	move is true if a motor is being moved.
 //	values are in x, y, z, a order.
 //	True on success.
-
 bool tg_move( bool move[ MM ], double pos[ MM ], int tosec )
 {
 	char	buf[ 300 ],															//	tinyg command
@@ -376,24 +377,26 @@ bool tg_move( bool move[ MM ], double pos[ MM ], int tosec )
 				//	lines contain posm1:<pos>,posm2:<pos>,...vel:<vel>,stat:<status>
 				//	The final line contains all moving motors with their positions equal to pos[].
 
-//				printf( "%s\n", rbuf );
+				//	printf( "%s\n", rbuf );
 
-				if ( strstr( rbuf, sbuf ) != NULL )
-					return( true );												//	all axis match expected positions
+				if (strstr(rbuf, sbuf) != NULL) {
+					//closeports();
+					return(true);
+				}//	all axis match expected positions
 
 			}
 			printf( "error\n" );
 		}	//	any motor is being moved
-		else
-			return( true );														//	no motors moving, success
+		else {
+			//closeports();
+			return(true);
+		}//	no motors moving, success
 	}	//	retry
 	return( false );															//	didn't get proper status
 }
 
-
 const char *rmin = "$%stn\r";													//	request min range
 const char *rmax = "$%stm\r";													//	and max range
-
 bool tg_getranges( tg_range_t *mrange )
 {
 	int		i, retry;
@@ -407,7 +410,7 @@ bool tg_getranges( tg_range_t *mrange )
 
 			while ( cmdio( buf, CLOCKS_PER_SEC, rbuf, sizeof( rbuf ), (char *) "\xA", false ) )
 			{
-//				printf( "%s\n", rbuf );
+				//	printf( "%s\n", rbuf );
 				//	[xtn] x travel minimum            0.000 mm
 				//	tinyg [mm] ok>
 
@@ -463,4 +466,3 @@ void tg_comm( char *msg )
 {
 	simplecomma( 0x1B, true, msg, true );
 }
-

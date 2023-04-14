@@ -1,9 +1,5 @@
-#include <Windows.h>
-#include <time.h>
-#include "win32comm.h"
-#include "optel_tinyg_api.h"
+#pragma once
 #include <msclr/marshal.h>
-#include <msclr/gcroot.h>
 
 namespace TinyGLib {
 
@@ -24,6 +20,8 @@ namespace TinyGLib {
         bool Move(array<bool>^ motors, array<double>^ positions, int timeoutSeconds);
         array<TgRange>^ GetRanges();
         void Comm(System::String^ message);
+        bool OpenPorts();
+        void ClosePorts();
 
     private:
         System::Threading::Mutex^ m_Mutex; // Mutex member
