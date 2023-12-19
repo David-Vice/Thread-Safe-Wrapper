@@ -11,10 +11,12 @@ public ref class scoped_lock {
 public:
     scoped_lock(System::Threading::Mutex^ m) : m_Mutex(m) {
         m_Mutex->WaitOne();
+        printf("Closed Mutex\n");
     }
 
     ~scoped_lock() {
         m_Mutex->ReleaseMutex();
+        printf("Released Mutex\n");
     }
 
 private:
@@ -24,16 +26,19 @@ private:
 TinyG::TinyG()
 {
     m_Mutex = gcnew System::Threading::Mutex();
+    printf("TinyG Constructor\n");
 }
 
 TinyG::~TinyG()
 {
     delete m_Mutex;
+    printf("TinyG Destructor\n");
 }
 
 double TinyG::Version()
 {
     scoped_lock lock(m_Mutex);
+    printf("Version()\n");
     double version = tg_version();
     return version;
 }
@@ -41,7 +46,7 @@ double TinyG::Version()
 array<double>^ TinyG::GetPositions()
 {
     scoped_lock lock(m_Mutex);
-
+    printf("GetPositions()\n");
     double positions[MM];
     tg_getpos(positions);
     array<double>^ managedPositions = gcnew array<double>(MM);
@@ -56,7 +61,7 @@ array<double>^ TinyG::GetPositions()
 bool TinyG::Home(array<bool>^ motors, int timeoutSeconds)
 {
     scoped_lock lock(m_Mutex);
-
+    printf("Home()\n");
     bool home[MM];
     for (int i = 0; i < MM; i++)
     {
@@ -70,7 +75,7 @@ bool TinyG::Home(array<bool>^ motors, int timeoutSeconds)
 bool TinyG::Move(array<bool>^ motors, array<double>^ positions, int timeoutSeconds)
 {
     scoped_lock lock(m_Mutex);
-
+    printf("Move()\n");
     bool move[MM];
     double pos[MM];
     for (int i = 0; i < MM; i++)
@@ -86,7 +91,7 @@ bool TinyG::Move(array<bool>^ motors, array<double>^ positions, int timeoutSecon
 array<TgRange>^ TinyG::GetRanges()
 {
     scoped_lock lock(m_Mutex);
-
+    printf("GetRanges()\n");
     tg_range_t mrange[MM];
     tg_getranges(mrange);
     array<TgRange>^ managedRanges = gcnew array<TgRange>(MM);
@@ -104,7 +109,7 @@ array<TgRange>^ TinyG::GetRanges()
 void TinyG::Comm(System::String^ message)
 {
     scoped_lock lock(m_Mutex);
-
+    printf("Comm()\n");
     marshal_context context;
     const char* nativeMessage = context.marshal_as<const char*>(message);
     tg_comm(const_cast<char*>(nativeMessage));
@@ -113,11 +118,13 @@ void TinyG::Comm(System::String^ message)
 bool TinyG::OpenPorts()
 {
     scoped_lock lock(m_Mutex);
+    printf("OpenPorts()\n");
     return tg_open_ports();
 }
 
 void TinyG::ClosePorts()
 {
     scoped_lock lock(m_Mutex);
+    printf("ClosePorts()\n");
     tg_close_ports();
 }
